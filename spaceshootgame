@@ -1,0 +1,202 @@
+import pygame
+import random
+import button
+
+pygame.init()
+x =520
+y = 520
+
+screen = pygame.display.set_mode((x, y))
+pygame.display.set_caption("SpaceBoom")
+
+start_img = pygame.image.load('assents/playgame.png').convert_alpha()
+quit_img = pygame.image.load('assents/exitgame.png').convert_alpha()
+
+class Button():
+    def __init__(self, x, y, image, scale):
+        width = image.get_width()
+        height = image.get_height()
+        self.image = pygame.transform.scale(image, (int(width * scale), int(height * scale)))
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+        self.clicked = False
+
+    def draw(self):
+        action = False
+        pos = pygame.mouse.get_pos()
+        
+        if self.rect.collidepoint(pos):
+            if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False:
+                self.clicked = True
+                action = True
+
+        if pygame.mouse.get_pressed()[0] == 0:
+            self.clicked = False
+
+        screen.blit(self.image, (self.rect.x, self.rect.y))
+
+        return action
+start_button = Button(100, 230, start_img, 0.5)
+exit_button = Button(330, 230, quit_img, 0.5 )
+#teste lobby
+run = True
+while run:
+    screen.fill((225, 225, 225))
+    
+    if start_button.draw():
+        run = False
+    if exit_button.draw():
+        run = False
+    
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            run = False
+    pygame.display.update()
+
+
+
+
+
+music = pygame.mixer.music.load('sounds/retrosoundtrack.mp3')
+pygame.mixer.music.play(-1)
+shoot = pygame.mixer.Sound('sounds/shoot.mp3')
+
+bg = pygame.image.load('assents/bg.png').convert_alpha()
+bg = pygame.transform.scale(bg, (x, y))
+
+
+alien = pygame.image.load('assents/vilao.png').convert_alpha()
+alien = pygame.transform.scale(alien, (50, 50))
+alien = pygame.transform.rotate( alien, 90)
+
+playerimg = pygame.image.load('assents/nave.png').convert_alpha()
+playerimg = pygame.transform.scale(playerimg, (50, 50))
+playerimg = pygame.transform.rotate(playerimg, -90)
+
+missil = pygame.image.load('assents/missil.png').convert_alpha()
+missil = pygame.transform.scale(missil, (25, 25))
+missil = pygame.transform.rotate(missil, -270)
+
+pos_alien_x = 400
+pos_alien_y = 250
+
+pos_player_x = 50
+pos_player_y = 240
+
+vel_x_missil = 0
+pos_x_missil = 50
+pos_y_missil = 240
+
+pontos = 10
+
+triggered = False
+
+font = pygame.font.SysFont('fonts/PixelGameFont.ttf', 50)
+
+def respawn_missil():
+    triggered = False
+    respawn_missil_x = pos_player_x
+    respawn_missil_y = pos_player_y
+    vel_x_missil = 0
+    return [respawn_missil_x, respawn_missil_y, triggered, vel_x_missil]
+
+
+def respawn():
+    x = 520
+    y = random.randint(1, 400)
+    return [x, y]
+
+def colisions():
+    global pontos
+    if player_rect.colliderect(alien_rect) or alien_rect.x == 10:
+        pontos -=1
+        return True
+    elif missil_rect.colliderect(alien_rect):
+        pontos +=1
+        return True
+    else:
+        return False
+
+#transformando imagem em objeto!!!
+
+player_rect = playerimg.get_rect()
+alien_rect = alien.get_rect()
+missil_rect = missil.get_rect()
+
+
+#booleano para manter o app aberto
+rodando = True
+while rodando:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            rodando = False
+
+    screen.blit(bg, (0, 0))
+
+#loop do bg estilo carrocel
+    rel_x = x % bg.get_rect().width 
+    screen.blit(bg, (rel_x - bg.get_rect().width,0))
+    if rel_x < 520:
+        screen.blit(bg, (rel_x, 0))
+
+
+#teclas
+
+    tecla = pygame.key.get_pressed()
+    if tecla[pygame.K_UP] and pos_player_y > 1: 
+        pos_player_y -=4
+        
+        if not triggered: 
+            pos_y_missil -=4
+
+    if tecla[pygame.K_DOWN] and pos_player_y < 460:
+        pos_player_y +=4
+       
+        if not triggered:
+            pos_y_missil +=4
+
+    if tecla[pygame.K_SPACE]:
+        shoot.play()
+        triggered = True
+        vel_x_missil = 2
+
+    if pontos < 0:
+        rodando = False
+
+    if pos_alien_x == 20:
+        pos_alien_x = respawn()[0]
+        pos_alien_y = respawn()[1]
+
+    if pos_x_missil == 500 or colisions():
+        pos_x_missil, pos_y_missil, triggered, vel_x_missil = respawn_missil()
+
+    if pos_alien_x == 20 or colisions():
+        pos_alien_x = respawn()[0]
+        pos_alien_y = respawn()[1]
+
+    player_rect.x = pos_player_x
+    player_rect.y = pos_player_y
+
+    missil_rect.x = pos_x_missil
+    missil_rect.y = pos_y_missil
+
+    alien_rect.x = pos_alien_x
+    alien_rect.y = pos_alien_y
+#movimento
+    x -=4 
+    pos_alien_x -=4
+    pos_x_missil += vel_x_missil
+
+
+    score = font.render(f' Pontos: {int(pontos)}', True, (255, 255, 255))
+    screen.blit(score, (50, 50))
+#Cria imagem na tela
+    screen.blit(alien, (pos_alien_x, pos_alien_y))
+    screen.blit(missil, (pos_x_missil, pos_y_missil))
+    screen.blit(playerimg, (pos_player_x, pos_player_y))
+
+
+
+    pygame.display.update()
+pygame.quit()
